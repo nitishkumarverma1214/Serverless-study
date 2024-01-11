@@ -1,0 +1,198 @@
+openapi: 3.0.0
+info:
+  title: Auction API 
+  version: 1.0.0
+  description: api endpoint for the auction service
+servers:
+  - url: https://azp0fz85y9.execute-api.us-east-1.amazonaws.com/dev
+    description: endpoint for the dev environment
+
+paths:
+  /auctions/{auctionId}:
+    get:
+      description: return the auction of the matching id
+      parameters:
+        - in: path
+          name: auctionId
+          schema:
+            type: integer
+          required: true
+          description: Numeric ID of the auction to get
+      responses:
+        '404':
+          description: auction not found.
+        '500':
+          description: Internal server error.
+        '200':
+          description: return auction by the auction id
+          content:
+            application/json:
+              schema:
+                required:
+                  - id
+                  - title
+                $ref: "#/components/schemas/Auction"
+  /auctions/{auctionId}/bid:
+    patch:
+      description: place bid on the auction
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Numeric ID of the auction   
+      requestBody:
+        required: true
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+              example:
+                auction:
+                  title: 400
+      responses:
+        '200':
+            description: new created auction
+            content:
+              application/json:
+                schema:
+                  type: object
+                  $ref: "#/components/schemas/Auction"
+        '500': 
+          description: Interal server error         
+        '403': 
+          description: Forbidden to update the auction        
+        '400': 
+          description: Bad request       
+  /auctions/{auctionId}/picture:  
+    patch:
+      description: set picture url in the auction
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Numeric ID of the auction   
+      requestBody:
+        required: true
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+              example:
+                auction:
+                  title: 400
+      responses:
+        '200':
+            description: return the updated auction
+            content:
+              application/json:
+                schema:
+                  type: object
+                  $ref: "#/components/schemas/Auction"
+        '500': 
+          description: Interal server error         
+        '403': 
+          description: Forbidden to update the auction        
+        '400': 
+          description: Bad request       
+    
+        
+  /auctions:
+    get:
+      description: returns a list of auctions
+      parameters:
+        - name: status
+          in: query
+          description: filter auctions based on the status
+          schema:
+            type: string
+            enum:
+              - OPEN
+              - CLOSE
+            default:
+              OPEN
+      responses:
+        '200':
+            description: a json array of auction object
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    required:
+                      - id
+                      - title
+                    $ref: "#/components/schemas/Auction"
+        '500': 
+          description: Interal server error
+    post:
+      description: create a new auction
+      requestBody:
+        required: true
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+              example:
+                auction:
+                  title: 'New Year 2024'
+      responses:
+        '200':
+            description: new created auction
+            content:
+              application/json:
+                schema:
+                  type: object
+                  $ref: "#/components/schemas/Auction"
+        '500': 
+          description: Interal server error
+
+components:
+  schemas:
+    Auction:
+      type: "object"
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "4fc7d532-e6cf-4d4f-8921-54d45f935479"
+        endingAt:
+          type: string
+          format: date-time
+          example: '2017-07-21T17:32:28Z'
+        status:
+          type: string
+          example: OPEN
+        title:
+          type: string
+          example: 'Welcome to the Jungle'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2017-07-21T17:32:28Z'
+        highestBid:
+          type: object
+          properties:
+            amount:
+              type: number
+              example: 500
+            bidder:
+              title: email of the bidder
+              type: string
+              example: 'bidder@xyx.com'
+        seller:
+          title: email of the auction creator.
+          type: string
+          example: 'creator@xyz.com'

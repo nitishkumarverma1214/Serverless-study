@@ -1,0 +1,81 @@
+service: auction-service
+
+frameworkVersion: '3.38.0'
+
+plugins:
+  - serverless-bundle
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  memorySize: 256
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  environment:
+    AUCTIONS_TABLE_NAME: ${self:custom.AuctionsTable.name}
+    MAIL_QUEUE_URL: ${self:custom.MailQueue.url}
+    API_URL: !Sub 'https://${ApiGatewayRestApi}.execute-api.${aws:region}.amazonaws.com/${self:provider.stage}'
+    AUCTION_BUCKET_NAME: ${self:custom.AuctionBucket.name}
+  iamRoleStatements:
+    - ${file(iam/AuctionsTableIAMRoles.yml):AuctionsTableIAMRole}
+    - ${file(iam/MailQueueIAMRoles.yml):MailQueueIAMRoles}
+    - ${file(iam/AuctionBucketIAMRoles.yml):AuctionBucketIAM}
+
+resources:
+  Resources:
+    AuctionsTable: ${file(resources/AuctionsTable.yml):AuctionsTable}
+    AuctionBucket: ${file(resources/AuctionBucket.yml):AuctionBucket}
+    AuctionBucketPolicy: ${file(resources/AuctionBucket.yml):AuctionBucketPolicy}
+  
+functions:
+  createAuction:
+    handler: src/handlers/createAuction.handler
+    events:
+      - http:
+          method: POST
+          path: /auction
+          authorizer: ${self:custom.authorizer}
+  getAuctions:
+    handler: src/handlers/getAuctions.handler
+    events:
+      - http:
+          method: GET
+          path: /auctions
+          authorizer: ${self:custom.authorizer}
+  getAuction:
+    handler: src/handlers/getAuction.handler
+    events:
+      - http:
+          method: GET
+          path: /auctions/{id}
+          authorizer: ${self:custom.authorizer}
+  placeBid:
+    handler: src/handlers/placeBid.handler
+    events:
+      - http:
+          method: PATCH
+          path: /auctions/{id}/bid
+          authorizer: ${self:custom.authorizer}
+  uploadAuctionPicture:
+    handler: src/handlers/uploadAuctionPicture.handler
+    events:
+      - http:
+          method: PATCH
+          path: /auctions/{id}/picture
+          authorizer: ${self:custom.authorizer}
+
+  processAuction:
+    handler: src/handlers/processAuction.handler
+    # events:
+    #   - schedule: rate(1 minute)
+
+custom:
+  authorizer: arn:aws:lambda:${aws:region}:${aws:accountId}:function:auth-service-${self:provider.stage}-auth
+  AuctionBucket:
+    name: auction-bucket-aws-serverless-${self:provider.stage}
+  AuctionsTable: 
+    name: !Ref AuctionsTable #intrinsic function
+    arn: !GetAtt AuctionsTable.Arn
+  MailQueue:
+    url: ${cf:notification-service-${self:provider.stage}.MailQueueUrl}
+    arn: ${cf:notification-service-${self:provider.stage}.MailQueueArn}
